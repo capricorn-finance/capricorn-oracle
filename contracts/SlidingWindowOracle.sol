@@ -67,7 +67,7 @@ contract SlidingWindowOracle {
 
     // update the cumulative price for the observation at the current timestamp. each observation is updated at most
     // once per epoch period.
-    function update(address tokenA, address tokenB) external {
+    function update(address tokenA, address tokenB) public {
         address pair = ICapricornFactory(factory).getPair(tokenA, tokenB);
 
         // populate the array with empty observations (first call only)
@@ -86,6 +86,18 @@ contract SlidingWindowOracle {
             observation.timestamp = block.timestamp;
             observation.price0Cumulative = price0Cumulative;
             observation.price1Cumulative = price1Cumulative;
+        }
+    }
+
+    // batch update multi token-pairs
+    function batchUpdate(address[] calldata tokenAs, address[] calldata tokenBs) external {
+        uint256 tokenAsLength = tokenAs.length;
+        uint256 tokenBsLength = tokenBs.length;
+        require(tokenAsLength > 0, "tokenAsLength is 0");
+        require(tokenAsLength == tokenBsLength, "tokenAsLength should equal tokenBsLength");
+
+        for (uint256 i = 0; i < tokenAsLength; i++) {
+            update(tokenAs[i], tokenBs[i]);
         }
     }
 
@@ -118,10 +130,6 @@ contract SlidingWindowOracle {
         uint timeElapsed = block.timestamp - firstObservation.timestamp;
         // Missing Historical Observation
         if (timeElapsed > windowSize) {
-            return (0, false);
-        }
-        // Unexpected Time Elapsed
-        if (timeElapsed < windowSize - periodSize * 2) {
             return (0, false);
         }
 
